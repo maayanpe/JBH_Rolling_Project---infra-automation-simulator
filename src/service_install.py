@@ -3,26 +3,38 @@ import os
 import logging
 import subprocess
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-SCRIPT_FILE = os.path.join(BASE_DIR, "scripts", "install_service.sh")
-LOG_FILE = os.path.join(BASE_DIR, "logs", "provisioning.log")
+# Project paths
+project_dir = os.path.dirname(os.path.dirname(__file__))
+script_path = os.path.join(project_dir, "scripts", "install_service.sh")
+log_path = os.path.join(project_dir, "logs", "provisioning.log")
 
-def run_install_for_vm(machine_addr, service):
-    logging.info("Service install started for %s (service=%s)", machine_addr, service)
-    env = os.environ.copy()
-    env["LOG_PATH"] = LOG_FILE  # אם תרצי שהbash יכתוב גם ללוג הזה
+def run_install_for_vm(machine_address, service_name):
+    logging.info("Start install on %s (service=%s)", machine_address, service_name)
+
+    # Add LOG_PATH for the bash script
+    environment = os.environ.copy()
+    environment["LOG_PATH"] = log_path
+
     try:
-        res = subprocess.run([SCRIPT_FILE, machine_addr, service],
-                             text=True, capture_output=True, env=env)
-        if res.stdout.strip():
-            logging.info("bash stdout: %s", res.stdout.strip())
-        if res.stderr.strip():
-            logging.error("bash stderr: %s", res.stderr.strip())
+        # Run the script, collect output, do not print to screen
+        result = subprocess.run(
+            [script_path, machine_address, service_name],
+            text=True,
+            capture_output=True,
+            env=environment
+        )
 
-        if res.returncode != 0:
-            logging.error("Service install failed on %s (exit=%s)", machine_addr, res.returncode)
+        # Log what the script wrote
+        if result.stdout:
+            logging.info("bash stdout: %s", result.stdout.strip())
+        if result.stderr:
+            logging.error("bash stderr: %s", result.stderr.strip())
+
+        # Check exit code
+        if result.returncode != 0:
+            logging.error("Install failed on %s (exit=%s)", machine_address, result.returncode)
         else:
-            logging.info("Service install finished OK on %s", machine_addr)
-    except Exception as e:
-        logging.exception("Failed running bash script for %s: %s", machine_addr, e)
+            logging.info("Install finished OK on %s", machine_address)
 
+    except Exception as error:
+        logging.exception("Failed to run install script on %s: %s", machine_address, error)

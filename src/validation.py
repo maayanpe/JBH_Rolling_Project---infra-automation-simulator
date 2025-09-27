@@ -1,80 +1,77 @@
 # src/validation.py
-import re
 from jsonschema import validate, ValidationError
 
-ALLOWED_OSES = {"windows", "win", "linux", "mac", "unix", "centos", "rhel"}  # הרחיבי אם תרצי: {"windows","win","linux","ubuntu","centos",...}
+# Allowed operating systems (lowercase). Extend if you want.
+ALLOWED_OSES = {"windows", "win", "linux", "mac", "unix", "centos", "rhel"}
 
+# Schema to describe what a valid VM must have
 VM_SCHEMA = {
     "type": "object",
     "properties": {
-        "name":     {"type": "string", "minLength": 1},
-        "address":  {"type": "string", "minLength": 1},
-        "os":       {"type": "string", "minLength": 1},
-        "cpu":      {"type": "integer", "minimum": 1},
-        "memory":   {"type": "integer", "minimum": 1},
-        "disk":     {"type": "integer", "minimum": 1}
+        "name":    {"type": "string", "minLength": 1},
+        "address": {"type": "string", "minLength": 1},
+        "os":      {"type": "string", "minLength": 1},
+        "cpu":     {"type": "integer", "minimum": 1},
+        "memory":  {"type": "integer", "minimum": 1},
+        "disk":    {"type": "integer", "minimum": 1},
     },
     "required": ["name", "address", "os", "cpu", "memory", "disk"],
-    "additionalProperties": False
+    "additionalProperties": False,
 }
 
-def validate_and_clean(raw: dict):
+def validate_and_clean(input_data: dict):
     """
-    מחזיר (ok, cleaned, errors):
-      ok - True/False
-      cleaned - dict נקי ומוקלד נכון (ints)
-      errors - רשימת מחרוזות עם שגיאות לפי שדות (כולל כמה במקביל)
+    Input: dictionary with VM data
+    Output: (ok: bool, valid_data dict or {}, list of error messages)
     """
     errors = []
-    cleaned = {}
+    valid_data = {}
 
-    # name
-    name = (raw.get("name") or "").strip()
+    # 1) name
+    name = str(input_data.get("name") or "").strip()
     if not name:
         errors.append("name: must not be empty")
     else:
-        cleaned["name"] = name
+        valid_data["name"] = name
 
-    # address
-    address = (raw.get("address") or "").strip()
+    # 2) address
+    address = str(input_data.get("address") or "").strip()
     if not address:
         errors.append("address: must not be empty (IP or hostname)")
     else:
-        cleaned["address"] = address
+        valid_data["address"] = address
 
-    # os
-    os_raw = (raw.get("os") or "").strip()
+    # 3) os
+    os_raw = str(input_data.get("os") or "").strip()
     if not os_raw:
         errors.append("os: must not be empty")
     else:
-        if not re.fullmatch(r"[A-Za-z]+", os_raw):
+        if not os_raw.isalpha():
             errors.append("os: letters only (A–Z/a–z), no numbers/spaces")
-        # בדיקת רשימה מותרת (case-insensitive)
         if os_raw.lower() not in ALLOWED_OSES:
             allowed = ", ".join(sorted(ALLOWED_OSES))
             errors.append(f"os: not allowed. valid values: {allowed}")
-        cleaned["os"] = os_raw
+        valid_data["os"] = os_raw
 
-    # numeric fields
-    for fld, label in [("cpu", "CPU"), ("memory", "Memory"), ("disk", "Disk")]:
-        val = raw.get(fld)
+    # 4) numeric fields
+    for key, label in (("cpu", "CPU"), ("memory", "Memory"), ("disk", "Disk")):
+        val = input_data.get(key)
         try:
-            iv = int(str(val).strip())
-            if iv <= 0:
+            value_int = int(str(val).strip())
+            if value_int <= 0:
                 raise ValueError
-            cleaned[fld] = iv
+            valid_data[key] = value_int
         except Exception:
             errors.append(f"{label}: must be an integer > 0")
 
+    # If errors found, stop here
     if errors:
         return False, {}, errors
 
-    # סכימה רשמית (שקטה) לשמירת הדרישה
+    # Final schema check
     try:
-        validate(instance=cleaned, schema=VM_SCHEMA)
+        validate(instance=valid_data, schema=VM_SCHEMA)
     except ValidationError as e:
-        errors.append(f"schema: {e.message}")
-        return False, {}, errors
+        return False, {}, [f"schema: {e.message}"]
 
-    return True, cleaned, []
-
+    return True, valid_data, []

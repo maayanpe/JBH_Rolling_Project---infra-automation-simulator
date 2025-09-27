@@ -1,30 +1,56 @@
 #!/usr/bin/env bash
 
-# פרמטרים מהיוזר
 MACHINE="$1"
 SERVICE="$2"
+LOG_PATH="${LOG_PATH:-/dev/null}"   # default if not set
 
-# בדיקה שקיבלנו פרמטרים
+# log
+log() {
+  echo "$@"
+  echo "$(date '+%F %T') $@" >> "$LOG_PATH"
+}
+
+# check input
 if [ -z "$MACHINE" ] || [ -z "$SERVICE" ]; then
-  echo "Usage: $0 <machine_address> <service_name>"
+  log "Usage: $0 <machine_address> <service_name>"
   exit 1
 fi
 
-echo "======================================"
-echo "Start installation simulation"
-echo "Machine: $MACHINE"
-echo "Service: $SERVICE"
-echo "--------------------------------------"
+log "======================================"
+log "Start installation"
+log "Machine: $MACHINE"
+log "Service: $SERVICE"
+log "--------------------------------------"
 
-# כאן אנחנו רק מדמים, לא באמת מתקינים
-echo "Connecting to $MACHINE ..."
+# connect
+log "Connecting to $MACHINE ..."
 sleep 1
-echo "Checking if $SERVICE is already installed on $MACHINE ..."
+if [ $? -ne 0 ]; then
+  log "ERROR: failed to connect to $MACHINE"
+  exit 2
+else
+  log "Connected successfully to $MACHINE"
+fi
+
+# check service
+log "Checking if $SERVICE is already installed ..."
 sleep 1
-echo "$SERVICE is not installed. Simulating installation ..."
+if [ "$SERVICE" = "fail" ]; then
+  log "ERROR: installation of $SERVICE failed"
+  exit 3
+else
+  log "$SERVICE is not installed. Installing ..."
+fi
+
+# install
 sleep 2
-echo "$SERVICE installed successfully on $MACHINE (simulation)."
+if [ $? -ne 0 ]; then
+  log "ERROR: installation failed"
+  exit 4
+else
+  log "$SERVICE installed successfully on $MACHINE."
+fi
 
-echo "End installation simulation"
-echo "======================================"
+log "End installation"
+log "======================================"
 exit 0

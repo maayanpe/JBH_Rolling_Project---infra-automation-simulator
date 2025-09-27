@@ -9,7 +9,7 @@ def setup_env(log_dir, log_file):
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(CONF_DIR, exist_ok=True)
 
-    # מנקים קונפיג קודם (כדי לא להוסיף handlers כפולים בהרצות נוספות)
+    
     for h in logging.root.handlers[:]:
         logging.root.removeHandler(h)
 
@@ -18,7 +18,7 @@ def setup_env(log_dir, log_file):
         format="%(asctime)s %(levelname)s %(message)s",
         handlers=[
             logging.FileHandler(log_file, encoding="utf-8"),
-            logging.StreamHandler()  # מציג למסך (אין print)
+            logging.StreamHandler()  
         ]
     )
     logging.info("Logging ready at %s", log_file)
