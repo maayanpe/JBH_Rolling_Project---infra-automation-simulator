@@ -1,3 +1,4 @@
+# src/provision.py
 import os
 import json
 import logging
@@ -10,4 +11,7 @@ def save_instances(vms):
     data = [m.to_dict() for m in vms]
     with open(CONF_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-    logging.info("Saved %d VM(s) -> %s", len(vms), CONF_FILE)
+        f.flush()
+        os.fsync(f.fileno())
+    logging.info("Saved %d VM(s) to JSON: %s", len(vms), CONF_FILE)
+

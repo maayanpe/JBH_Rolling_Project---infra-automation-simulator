@@ -1,54 +1,61 @@
-import os
+# src/input_handler.py
 import logging
-from validation import is_valid_vm
+from validation import validate_and_clean
 from machine import Machine
 
-def to_pos_int(s):
-    try:
-        n = int(s)
-        if n > 0:
-            return n
-    except:
-        pass
-    return None
-
 def prompt_one_vm():
-    name = input("Enter machine name (or 'done' to finish): ").strip()
+    logging.info("--- Provisioning: collect VM data ---")
+    name    = input("Enter machine name (or 'done' to finish): ").strip()
     if name.lower() == "done":
         return None
 
+    address = input("Enter machine address (IP/Hostname): ").strip()
     os_name = input("Enter OS (letters only, e.g. Windows/Linux): ").strip()
-    cpu  = to_pos_int(input("Enter CPU (integer > 0): ").strip())
-    mem  = to_pos_int(input("Enter Memory (integer > 0): ").strip())
-    disk = to_pos_int(input("Enter Disk (integer > 0): ").strip())
+    cpu     = input("Enter CPU (integer > 0): ").strip()
+    mem     = input("Enter Memory (integer > 0): ").strip()
+    disk    = input("Enter Disk (integer > 0): ").strip()
 
-    data = {
+    ok, cleaned, errs = validate_and_clean({
         "name": name,
+        "address": address,
         "os": os_name,
-        "cpu": cpu if cpu else -1,
-        "memory": mem if mem else -1,
-        "disk": disk if disk else -1
-    }
+        "cpu": cpu,
+        "memory": mem,
+        "disk": disk
+    })
 
-    ok, msg = is_valid_vm(data)
     if not ok:
-        logging.error("Validation failed for '%s': %s", name, msg)
-        return {}
+        # לוג ברור לכל שגיאה
+        logging.error("Validation failed for VM input:")
+        for e in errs:
+            logging.error("  - %s", e)
+        return {}  # לא נוסיף לרשימה
 
-    return Machine(data["name"], data["os"], data["cpu"], data["memory"], data["disk"])
+    logging.info("Validation OK for VM '%s' (%s)", cleaned["name"], cleaned["address"])
+    return Machine(
+        cleaned["name"],
+        cleaned["address"],
+        cleaned["os"],
+        cleaned["cpu"],
+        cleaned["memory"],
+        cleaned["disk"],
+    )
 
 def collect_vms():
     items = []
+    idx = 0
     while True:
         vm = prompt_one_vm()
         if vm is None:
             break
         if vm:
+            idx += 1
             items.append(vm)
-            logging.info("VM accepted: %s", vm.name)
+            logging.info("VM %d accepted: %s (%s)", idx, vm.name, vm.address)
         else:
             logging.info("VM not added (invalid).")
         more = input("Add another machine? (y/n): ").strip().lower()
         if more != "y":
             break
     return items
+
