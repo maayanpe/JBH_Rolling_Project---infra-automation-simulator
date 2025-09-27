@@ -2,7 +2,7 @@
 from jsonschema import validate, ValidationError
 
 # Allowed operating systems (lowercase). Extend if you want.
-ALLOWED_OSES = {"windows", "win", "linux", "mac", "unix", "centos", "rhel"}
+ALLOWED_OSES = {"windows", "win", "linux", "mac", "unix", "centos", "rhel", "ubuntu"}
 
 # Schema to describe what a valid VM must have
 VM_SCHEMA = {
